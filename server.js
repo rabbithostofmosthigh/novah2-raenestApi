@@ -4,6 +4,10 @@ const cors = require("cors");
 const nodemailer = require("nodemailer");
 const rateLimit = require("express-rate-limit");
 
+// ✅ Trust Vercel's proxy so req.ip returns the real client IP
+// Without this, everyone shares the same proxy IP and hits the limit together
+app.set("trust proxy", 1);
+
 // ✅ CORS first
 app.use(
   cors({
@@ -23,9 +27,8 @@ const pass = "ynyfkpiinkhrvysl";
 // ── Permanent IP blocklist ────────────────────────────────────────────────────
 const blockedIPs = new Set();
 
-// Block any IP in the blocklist before they reach any route
 app.use((req, res, next) => {
-  const ip = req.ip || req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+  const ip = req.ip;
   if (blockedIPs.has(ip)) {
     console.warn(`🚫 Blocked IP tried again: ${ip}`);
     return res.status(403).json({ success: false, message: "Access denied." });
@@ -33,14 +36,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Rate limiter — 5 requests per hour, then permanently block ────────────────
+// ── Rate limiter — 5 requests per hour per real client IP ────────────────────
 const limiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => req.ip, // uses the real IP now that trust proxy is set
   handler: (req, res) => {
-    const ip = req.ip || req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    const ip = req.ip;
     blockedIPs.add(ip);
     console.warn(`🚫 IP permanently blocked: ${ip}`);
     return res.status(403).json({ success: false, message: "Access denied." });
