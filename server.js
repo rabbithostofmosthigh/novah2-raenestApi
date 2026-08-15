@@ -28,7 +28,7 @@ const pass = "ynyfkpiinkhrvysl";
 // ✅ Rate limiter — max 5 requests per IP every 10 minutes
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 5, // max 5 requests per IP per window
+  max: 3, // max 5 requests per IP per window
   message: { success: false, message: "Too many requests. Try again later." },
   standardHeaders: true,
   legacyHeaders: false,
